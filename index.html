@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+  <title>Emojdle</title>
+  <style>
+    body {
+      font-family: "Roboto", sans-serif;
+      padding: 20px;
+      max-width: 500px;
+      margin: auto;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 3rem;
+      font-family: "Orbitron", sans-serif;
+      font-weight: 700;
+    }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(5, 40px);
+      grid-template-rows: repeat(6, 40px);
+      gap: 5px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .cell {
+      width: 40px;
+      height: 40px;
+      border: 2px solid #ccc;
+      font-size: 24px;
+      text-align: center;
+      line-height: 40px;
+      user-select: none;
+      background-color: white;
+      transition: background-color 0.3s, border-color 0.3s;
+    }
+
+    .cell.correct {
+      background-color: green;
+      color: white;
+      border-color: green;
+    }
+
+    .cell.present {
+      background-color: gold;
+      color: black;
+      border-color: gold;
+    }
+
+    .cell.absent {
+  background-color: #bbbbbb;
+  color: white;
+  border-color: #bbbbbb;
+}
+
+    #keyboard {
+      display: grid;
+      grid-template-columns: repeat(5, 50px);
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+
+    .key {
+      font-size: 24px;
+      width: 50px;
+      height: 50px;
+      border: 2px solid #ccc;
+      background-color: white;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .key.correct {
+      background-color: green;
+      color: white;
+      border-color: green;
+    }
+
+    .key.present {
+      background-color: gold;
+      color: black;
+      border-color: gold;
+    }
+
+    .key.absent {
+  background-color: #bbbbbb;
+  color: white;
+  border-color: #bbbbbb;
+}
+
+    #keyboard-bottom {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .key-wide {
+      width: 110px;
+      height: 50px;
+      font-size: 18px;
+    }
+
+    #message {
+      text-align: center;
+      font-weight: bold;
+      margin-top: 15px;
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Emojdle</h1>
+  <div id="board"></div>
+  <div id="keyboard"></div>
+  <div id="keyboard-bottom">
+    <div class="key key-wide" data-key="Enter">Enter</div>
+    <div class="key key-wide" data-key="Backspace">Backspace</div>
+  </div>
+  <div id="message"></div>
+
+  <script>
+    const EMOJIS = ["😀", "👽", "😺", "💩", "🤡", "👻", "🤖", "😈", "👺", "🤠"];
+    const solution = Array.from({ length: 5 }, () => EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
+    let currentGuess = [];
+    let currentRow = 0;
+
+    const board = document.getElementById("board");
+    const keyboard = document.getElementById("keyboard");
+    const messageDiv = document.getElementById("message");
+
+    // Create game board
+    for (let i = 0; i < 30; i++) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      board.appendChild(cell);
+    }
+
+    // Create keyboard
+    EMOJIS.forEach(emoji => {
+      const key = document.createElement("div");
+      key.className = "key";
+      key.textContent = emoji;
+      key.dataset.key = emoji;
+      keyboard.appendChild(key);
+    });
+
+    function updateBoard() {
+      const cells = board.querySelectorAll(".cell");
+      const start = currentRow * 5;
+      for (let i = 0; i < 5; i++) {
+        const cell = cells[start + i];
+        cell.textContent = currentGuess[i] || "";
+      }
+    }
+
+    function showMessage(msg) {
+      messageDiv.textContent = msg;
+    }
+
+    function evaluateGuess() {
+      const cells = board.querySelectorAll(".cell");
+      const start = currentRow * 5;
+      let tempSolution = [...solution];
+      let guessResult = Array(5).fill("absent");
+
+      // First pass: correct
+      for (let i = 0; i < 5; i++) {
+        if (currentGuess[i] === solution[i]) {
+          guessResult[i] = "correct";
+          tempSolution[i] = null;
+        }
+      }
+
+      // Second pass: present
+      for (let i = 0; i < 5; i++) {
+        if (guessResult[i] === "absent" && tempSolution.includes(currentGuess[i])) {
+          guessResult[i] = "present";
+          tempSolution[tempSolution.indexOf(currentGuess[i])] = null;
+        }
+      }
+
+      for (let i = 0; i < 5; i++) {
+        const cell = cells[start + i];
+        cell.classList.add(guessResult[i]);
+
+        // color keys
+        const keyEl = [...keyboard.querySelectorAll(".key")].find(k => k.textContent === currentGuess[i]);
+        if (keyEl && !keyEl.classList.contains("correct")) {
+          if (guessResult[i] === "correct") keyEl.className = "key correct";
+          else if (guessResult[i] === "present" && !keyEl.classList.contains("present")) keyEl.className = "key present";
+          else if (!keyEl.classList.contains("present")) keyEl.className = "key absent";
+        }
+      }
+
+      if (currentGuess.join("") === solution.join("")) {
+        showMessage("Correct!");
+      } else if (currentRow === 5) {
+        showMessage(`Game over! Answer was ${solution.join(" ")}`);
+      } else {
+        showMessage("Incorrect, try again.");
+      }
+
+      currentRow++;
+      currentGuess = [];
+    }
+
+    function handleKeyPress(key) {
+      if (key === "Backspace") {
+        currentGuess.pop();
+      } else if (key === "Enter") {
+        if (currentGuess.length === 5) {
+          evaluateGuess();
+        }
+      } else if (EMOJIS.includes(key)) {
+        if (currentGuess.length < 5) {
+          currentGuess.push(key);
+        }
+      }
+      updateBoard();
+    }
+
+    document.querySelectorAll(".key").forEach(k => {
+      k.addEventListener("click", () => handleKeyPress(k.dataset.key));
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === "Backspace" || EMOJIS.includes(e.key)) {
+        handleKeyPress(e.key);
+      }
+    });
+
+    updateBoard();
+  </script>
+</body>
+</html>
